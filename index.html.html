@@ -1,0 +1,519 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Prompteador para Suno</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: columna de pasos a la izquierda, panel de prompt fijo a la derecha; en celular se apilan.
+   Look único oscuro, tipo flyer de estudio: negro cálido, naranja y amarillo, esquinas filosas. */
+:root {
+  --bg: #0D0C0B; --surface: #171513; --sunk: #211E1A; --ink: #F4EEE6; --soft: #A89F93; --line: #3A342D;
+  --orange: #FF6B1A; --yellow: #FFD23F; --on-hot: #140C04;
+  --accent: var(--orange); --on-accent: var(--on-hot);
+  --mayor: #4F86F7; --menor: #FF6B1A; --dim: #B78CF2;
+  --display: "Anton", "Archivo", Impact, "Arial Narrow", sans-serif;
+  --body: "Archivo", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 400 17px/1.5 var(--body);
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 9px);
+}
+::selection { background: var(--yellow); color: var(--on-hot); }
+.wrap { max-width: 1200px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 18px 28px; margin-bottom: 30px; padding-bottom: 22px; border-bottom: 3px solid var(--orange); position: relative; }
+header::after { content: ""; position: absolute; left: 0; bottom: -11px; width: min(260px, 50%); height: 8px; background: repeating-linear-gradient(-45deg, var(--yellow) 0 8px, var(--bg) 8px 16px); }
+.brand { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 700 13px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--yellow); }
+.eyebrow svg { width: 22px; height: 22px; color: var(--orange); }
+h1 { margin: 0; font: 400 clamp(46px, 9vw, 104px)/0.88 var(--display); text-transform: uppercase; letter-spacing: 0.005em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--orange); }
+header p { margin: 0; max-width: 52ch; color: var(--soft); text-wrap: pretty; }
+.surprise { min-height: 52px; border-radius: 2px; border: 2px solid var(--yellow); background: transparent; color: var(--yellow); font: 400 22px/1 var(--display); letter-spacing: 0.04em; text-transform: uppercase; padding: 0 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: background 0.12s, color 0.12s; }
+.surprise svg { width: 22px; height: 22px; }
+.surprise { grid-column: 2; grid-row: 1; justify-self: end; }
+.surprise:hover { background: var(--yellow); color: var(--on-hot); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 450px); gap: 26px; align-items: start; }
+.steps { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.step { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--orange); border-radius: 2px; padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.step:nth-child(even) { border-left-color: var(--yellow); }
+.step h2 { margin: 0; display: flex; align-items: center; gap: 12px; font: 400 30px/1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; }
+.step h2 .n { font: 700 13px/1 var(--mono); color: var(--on-hot); background: var(--yellow); padding: 6px 9px 5px; clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); flex: none; letter-spacing: 0.06em; }
+.step:nth-child(even) h2 .n { background: var(--orange); }
+.step h2 .ico { width: 40px; height: 40px; flex: none; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--line); color: var(--orange); border-radius: 2px; }
+.step:nth-child(even) h2 .ico { color: var(--yellow); }
+.step h2 .ico svg { width: 24px; height: 24px; }
+.hint { margin: -4px 0 0; color: var(--soft); font-size: 15px; text-wrap: pretty; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 600 15px/1.2 var(--body); min-height: 44px; padding: 9px 14px; border-radius: 2px; border: 1.5px solid var(--line); background: var(--sunk); color: var(--ink); cursor: pointer; text-align: left; transition: border-color 0.12s, background 0.12s; }
+.chip:hover { border-color: var(--orange); }
+.chip small { display: block; font: 400 12px/1.3 var(--mono); color: var(--soft); margin-top: 2px; }
+.chip[aria-pressed="true"] { background: var(--yellow); color: var(--on-hot); border-color: var(--yellow); }
+.chip[aria-pressed="true"] small { color: var(--on-hot); opacity: 0.75; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.play { min-height: 50px; border: 0; border-radius: 2px; padding: 0 22px; background: var(--orange); color: var(--on-hot); font: 400 22px/1 var(--display); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); padding-right: 30px; }
+.play:hover { background: var(--yellow); }
+.play svg { width: 16px; height: 16px; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-size: 15px; font-weight: 600; }
+.toggle input { width: 19px; height: 19px; accent-color: var(--orange); }
+.beats { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; align-items: center; font: 600 12px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--soft); background: var(--bg); border: 1px solid var(--line); padding: 12px; border-radius: 2px; }
+.lane { display: grid; gap: 3px; }
+.lane i { height: 18px; border-radius: 1px; background: var(--sunk); border: 1px solid var(--line); }
+.lane i.on { background: var(--orange); border-color: var(--orange); }
+.lane i.now { outline: 2px solid var(--yellow); outline-offset: 1px; }
+.lane i.on.now { background: var(--yellow); border-color: var(--yellow); }
+.bpmBox { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.bpmNum { font: 400 72px/0.9 var(--display); font-variant-numeric: tabular-nums; min-width: 3ch; color: var(--yellow); }
+.bpmNum small { font: 700 14px var(--mono); color: var(--orange); margin-left: 6px; letter-spacing: 0.1em; }
+input[type=range] { flex: 1 1 200px; accent-color: var(--orange); min-height: 44px; }
+select, input[type=text], textarea { font: inherit; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 2px; padding: 10px 12px; min-height: 48px; width: 100%; }
+input[type=text]::placeholder { color: #6E665C; }
+label.f { display: flex; flex-direction: column; gap: 6px; font: 700 12px/1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); flex: 1 1 200px; }
+label.f input, label.f select { font: 400 17px/1.4 var(--body); letter-spacing: 0; text-transform: none; }
+.prog { display: flex; flex-wrap: wrap; gap: 8px; }
+.chord { min-width: 72px; padding: 10px 12px 8px; border-radius: 2px; color: #FFFFFF; text-align: center; font: 400 30px/1 var(--display); border-bottom: 4px solid rgba(0,0,0,0.35); }
+.chord small { display: block; font: 700 12px/1.3 var(--mono); opacity: 0.9; margin-top: 4px; }
+.chord.M { background: var(--mayor); } .chord.m { background: var(--menor); color: var(--on-hot); } .chord.d { background: var(--dim); color: var(--on-hot); }
+
+.panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panelHead { display: flex; align-items: center; gap: 10px; font: 400 26px/1 var(--display); text-transform: uppercase; color: var(--yellow); letter-spacing: 0.03em; }
+.panelHead svg { width: 26px; height: 26px; color: var(--orange); }
+.out { background: var(--surface); border: 2px solid var(--orange); border-radius: 2px; padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; position: relative; }
+.out + .out { border-color: var(--yellow); }
+.out h3 { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.out h3 > span:first-child { font: 400 24px/1 var(--display) !important; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink) !important; display: inline-flex; align-items: center; gap: 8px; }
+.out h3 span { font: 600 12px var(--mono); color: var(--soft); }
+.where { margin: -2px 0 0; font-size: 14px; color: var(--soft); }
+.where b { color: var(--yellow); font-weight: 700; }
+pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 14px/1.6 var(--mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--orange); border-radius: 2px; padding: 14px; max-height: 320px; overflow: auto; user-select: all; }
+.out + .out pre { border-left-color: var(--yellow); }
+.copy { align-self: flex-start; min-height: 44px; border-radius: 2px; border: 0; background: var(--ink); color: var(--on-hot); font: 400 20px/1 var(--display); letter-spacing: 0.05em; text-transform: uppercase; padding: 0 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.copy::before { content: ""; width: 14px; height: 14px; border: 2px solid currentColor; box-shadow: 3px -3px 0 -1px var(--ink), 3px -3px 0 1px currentColor; }
+.copy:hover { background: var(--yellow); }
+.copy:hover::before { box-shadow: 3px -3px 0 -1px var(--yellow), 3px -3px 0 1px currentColor; }
+.copied { font: 700 13px var(--mono); color: var(--yellow); letter-spacing: 0.06em; text-transform: uppercase; }
+.howto { background: transparent; border: 1.5px dashed var(--line); border-radius: 2px; padding: 16px 18px; font-size: 15px; }
+.howto > b:first-child { display: flex; align-items: center; gap: 8px; font: 400 20px/1 var(--display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--orange); }
+.howto ol { margin: 10px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 5px; }
+.howto ol li::marker { color: var(--yellow); font-family: var(--mono); font-weight: 700; }
+.howto p { margin: 10px 0 0; color: var(--soft); font-size: 14px; }
+.howto p b { color: var(--yellow); }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } .panel { position: static; } }
+@media (max-width: 560px) { header { grid-template-columns: minmax(0, 1fr); } .surprise { grid-column: 1; grid-row: 3; justify-self: start; } .step h2 { font-size: 26px; } .bpmNum { font-size: 60px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><path d="M2 12h2M6 8v8M10 4v16M14 7v10M18 10v4M22 12h0"/></svg>Prrom-ts-ts · Música con IA</span>
+      <h1>Prompteador<br><em>para Suno</em></h1>
+    </div>
+    <p style="grid-column: 1 / -1">Elegí género, tempo, acordes, tema y voz. Escuchá cómo suena el ritmo y llevate el prompt listo para pegar en Suno.</p>
+    <button class="surprise" id="surprise" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><circle cx="16" cy="8" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="8" cy="16" r="1.4" fill="currentColor"/><circle cx="16" cy="16" r="1.4" fill="currentColor"/></svg>Sorprendeme</button>
+  </header>
+
+  <div class="layout">
+    <div class="steps">
+
+      <section class="step" aria-labelledby="s1">
+        <h2 id="s1"><span class="n">01</span><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3a9 9 0 0 1 6.4 2.6"/></svg></span>Género</h2>
+        <p class="hint">Tocá un género y apretá Escuchar para oír su ritmo de batería con tus acordes.</p>
+        <div class="chips" id="genres"></div>
+        <div class="row">
+          <button class="play" id="play1" type="button"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg><span>Escuchar</span></button>
+          <label class="toggle"><input type="checkbox" id="useDrums" checked> Batería</label>
+          <label class="toggle"><input type="checkbox" id="useChords" checked> Acordes</label>
+        </div>
+        <div class="beats" id="beats" aria-label="Patrón de batería del género"></div>
+      </section>
+
+      <section class="step" aria-labelledby="s2">
+        <h2 id="s2"><span class="n">02</span><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M8 21h8l-3-16h-2z"/><path d="M5 21h14"/><path d="M12 15l5-8"/></svg></span>Tempo</h2>
+        <p class="hint">Se ajusta solo al elegir género, pero lo podés cambiar.</p>
+        <div class="bpmBox">
+          <div class="bpmNum" aria-live="polite"><span id="bpmVal">100</span><small>BPM</small></div>
+          <input type="range" id="bpm" min="60" max="180" value="100" aria-label="Tempo en BPM">
+        </div>
+        <div class="chips" id="tempoPresets"></div>
+      </section>
+
+      <section class="step" aria-labelledby="s3">
+        <h2 id="s3"><span class="n">03</span><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="4" width="18" height="16"/><path d="M8 4v16M13 4v16"/><path d="M7 4v8h2V4M12 4v8h2V4M17 4v8h2V4" fill="currentColor"/></svg></span>Acordes</h2>
+        <div class="chips" id="progs"></div>
+        <div class="row">
+          <label class="f" for="key">Tonalidad<select id="key"></select></label>
+        </div>
+        <div class="prog" id="progView"></div>
+        <p class="hint" id="progDesc"></p>
+      </section>
+
+      <section class="step" aria-labelledby="s4">
+        <h2 id="s4"><span class="n">04</span><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></span>¿De qué trata?</h2>
+        <label class="f" for="themeText">Contalo en una frase
+          <input type="text" id="themeText" maxlength="140" autocomplete="off" placeholder="Ej.: un viaje en colectivo con amigos un domingo">
+        </label>
+      </section>
+
+      <section class="step" aria-labelledby="s5">
+        <h2 id="s5"><span class="n">05</span><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg></span>Cómo se siente</h2>
+        <p class="hint">Elegí hasta dos.</p>
+        <div class="chips" id="moods"></div>
+      </section>
+
+      <section class="step" aria-labelledby="s6">
+        <h2 id="s6"><span class="n">06</span><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg></span>Voz e instrumentos</h2>
+        <div class="chips" id="voices"></div>
+        <div class="chips" id="langs"></div>
+        <p class="hint">Instrumentos destacados (opcional, hasta tres):</p>
+        <div class="chips" id="insts"></div>
+      </section>
+
+      <section class="step" aria-labelledby="s7">
+        <h2 id="s7"><span class="n">07</span><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M9 12h6M9 16h6"/></svg></span>La letra</h2>
+        <div class="chips" id="writer"></div>
+        <div class="chips" id="structs"></div>
+        <label class="f" for="title">Título del tema (opcional)
+          <input type="text" id="title" maxlength="80" autocomplete="off" placeholder="Ej.: Domingo de Zonda">
+        </label>
+      </section>
+    </div>
+
+    <aside class="panel" aria-label="Tu prompt">
+      <div class="panelHead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"/></svg>Tu prompt</div>
+      <div class="out" id="outA">
+        <h3><span id="aTitle" style="font: 700 18px/1.2 var(--display); color: var(--ink)">Estilo</span><span id="aCount"></span></h3>
+        <p class="where" id="aWhere"></p>
+        <pre id="aText"></pre>
+        <div class="row"><button class="copy" type="button" data-copy="aText">Copiar</button><span class="copied" id="aMsg" role="status"></span></div>
+      </div>
+      <div class="out" id="outB">
+        <h3><span id="bTitle" style="font: 700 18px/1.2 var(--display); color: var(--ink)">Letra</span><span id="bCount"></span></h3>
+        <p class="where" id="bWhere"></p>
+        <pre id="bText"></pre>
+        <div class="row"><button class="copy" type="button" data-copy="bText">Copiar</button><span class="copied" id="bMsg" role="status"></span></div>
+      </div>
+      <div class="howto" id="howto"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- Datos ---------- */
+  // Patrones: k bombo, s redoblante/clap, h hi-hat. bar = pasos por compás. 6/8 usa corcheas.
+  var GENRES = [
+    { id: 'pop', name: 'Pop', tag: 'modern pop', bpm: 116, bar: 16, sw: 0, k: 'x.......x.x.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', inst: 'bright synths, punchy drums' },
+    { id: 'reggaeton', name: 'Reggaetón', tag: 'reggaeton, dembow rhythm', bpm: 92, bar: 16, sw: 0, k: 'x...x...x...x...', s: '...x..x....x..x.', h: '', inst: 'deep 808 bass, synth plucks' },
+    { id: 'trap', name: 'Trap', tag: 'trap, rolling hi-hats', bpm: 140, bar: 16, sw: 0, k: 'x......x..x.....', s: '........x.......', h: 'xxxxxxxxxxxxxxxx', inst: 'heavy 808 bass, dark pads' },
+    { id: 'cumbia', name: 'Cumbia', tag: 'Argentine cumbia', bpm: 96, bar: 16, sw: 0, k: 'x.......x.......', s: '....x.......x...', h: 'x.xxx.xxx.xxx.xx', inst: 'güira, accordion, keyboard' },
+    { id: 'cuarteto', name: 'Cuarteto', tag: 'cuarteto cordobés', bpm: 104, bar: 16, sw: 0, k: 'x...x...x...x...', s: '..x...x...x...x.', h: 'x.x.x.x.x.x.x.x.', inst: 'piano, tumbadoras, accordion' },
+    { id: 'rock', name: 'Rock', tag: 'rock', bpm: 124, bar: 16, sw: 0, k: 'x.....x.x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', inst: 'distorted electric guitars, live drums' },
+    { id: 'indie', name: 'Indie', tag: 'indie pop', bpm: 112, bar: 16, sw: 0, k: 'x.......x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', inst: 'clean reverb guitars, warm synths' },
+    { id: 'hiphop', name: 'Hip hop / rap', tag: 'boom bap hip hop', bpm: 90, bar: 16, sw: 1, k: 'x......x.x......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', inst: 'sampled piano, vinyl crackle' },
+    { id: 'lofi', name: 'Lo-fi', tag: 'lo-fi hip hop', bpm: 78, bar: 16, sw: 1, k: 'x.......x.x.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', inst: 'Rhodes piano, soft drums, vinyl texture' },
+    { id: 'house', name: 'House / EDM', tag: 'house, four-on-the-floor', bpm: 124, bar: 16, sw: 0, k: 'x...x...x...x...', s: '....x.......x...', h: '..x...x...x...x.', inst: 'synth chords, sidechained bass' },
+    { id: 'reggae', name: 'Reggae', tag: 'roots reggae, one drop', bpm: 76, bar: 16, sw: 0, k: '........x.......', s: '........x.......', h: 'x.x.x.x.x.x.x.x.', inst: 'offbeat guitar skank, deep bass' },
+    { id: 'funk', name: 'Funk', tag: 'funk', bpm: 106, bar: 16, sw: 0, k: 'x..x..x...x..x..', s: '....x..x.x..x...', h: 'xxxxxxxxxxxxxxxx', inst: 'slap bass, muted funk guitar, horns' },
+    { id: 'balada', name: 'Balada', tag: 'pop ballad', bpm: 72, bar: 16, sw: 0, k: 'x.......x.......', s: '....x.......x...', h: 'x...x...x...x...', inst: 'piano, strings' },
+    { id: 'chacarera', name: 'Folclore (chacarera)', tag: 'Argentine folk, chacarera, 6/8', bpm: 100, bar: 6, sw: 0, k: 'x.....x..x..', s: '...x.x...x.x', h: 'x.xx.xx.xx.x', inst: 'bombo legüero, acoustic guitar, violin' }
+  ];
+  var TEMPOS = [['Lento', 70], ['Medio', 100], ['Rápido', 130], ['Muy rápido', 160]];
+  // pasos: [semitonos desde la tónica, calidad]
+  var PROGS = [
+    { id: 'pop', name: 'La del pop', mode: 'M', rn: 'I – V – vi – IV', st: [[0, 'M'], [7, 'M'], [9, 'm'], [5, 'M']], d: 'La más usada del pop actual.' },
+    { id: 'emo', name: 'La emotiva', mode: 'M', rn: 'vi – IV – I – V', st: [[9, 'm'], [5, 'M'], [0, 'M'], [7, 'M']], d: 'Arranca en menor: más dramática.' },
+    { id: 'perreo', name: 'La del perreo', mode: 'm', rn: 'i – VI – III – VII', st: [[0, 'm'], [8, 'M'], [3, 'M'], [10, 'M']], d: 'Base de muchísimo reggaetón y trap.' },
+    { id: 'andaluza', name: 'Andaluza', mode: 'm', rn: 'i – VII – VI – V', st: [[0, 'm'], [10, 'M'], [8, 'M'], [7, 'M']], d: 'Baja paso a paso. Flamenco, rock épico.' },
+    { id: 'tres', name: 'Tres acordes', mode: 'M', rn: 'I – IV – I – V', st: [[0, 'M'], [5, 'M'], [0, 'M'], [7, 'M']], d: 'Rock, folk y cuarteto. Simple y con energía.' },
+    { id: 'pena', name: 'Menor de peña', mode: 'm', rn: 'i – iv – V – i', st: [[0, 'm'], [5, 'm'], [7, 'M'], [0, 'm']], d: 'Cumbia y folclore: sencilla y bailable.' },
+    { id: 'lofi', name: 'Vuelta lo-fi', mode: 'M', rn: 'Imaj7 – vi7 – ii7 – V7', st: [[0, 'maj7'], [9, 'm7'], [2, 'm7'], [7, '7']], d: 'Acordes con séptima, relajada.' },
+    { id: 'anime', name: 'Anime / J-pop', mode: 'M', rn: 'IV – V – iii – vi', st: [[5, 'M'], [7, 'M'], [4, 'm'], [9, 'm']], d: 'Sube, emociona y queda abierta.' }
+  ];
+  var THEMES = [
+    ['amistad', 'Amistad', 'friendship'], ['amor', 'Amor', 'falling in love'], ['desamor', 'Desamor', 'heartbreak'],
+    ['barrio', 'Mi barrio', 'my neighborhood'], ['zonda', 'La montaña y el Zonda', 'the Andes mountains and the Zonda wind'],
+    ['vendimia', 'Vendimia', 'the grape harvest festival'], ['superar', 'Salir adelante', 'overcoming obstacles'],
+    ['fiesta', 'Fiesta', 'partying with friends'], ['egresados', 'Fin de curso', 'graduation and the last school days'],
+    ['familia', 'Familia', 'family'], ['futuro', 'Futuro y tecnología', 'the future and technology'],
+    ['ambiente', 'Cuidar el planeta', 'caring for nature']
+  ];
+  var MOODS = [
+    ['alegre', 'Alegre', 'happy, upbeat'], ['enérgico', 'Enérgico', 'energetic'], ['tranquilo', 'Tranquilo', 'chill, relaxed'],
+    ['melancólico', 'Melancólico', 'melancholic'], ['romántico', 'Romántico', 'romantic'], ['épico', 'Épico', 'epic'],
+    ['oscuro', 'Oscuro', 'dark, moody'], ['nostálgico', 'Nostálgico', 'nostalgic'], ['divertido', 'Divertido', 'playful']
+  ];
+  var VOICES = [
+    ['fem', 'Voz femenina', 'female vocals', 'voz femenina'], ['masc', 'Voz masculina', 'male vocals', 'voz masculina'],
+    ['duo', 'Dúo', 'male and female duet', 'un dúo de voces'], ['coro', 'Coro', 'group vocals, choir', 'voces en coro'],
+    ['rap', 'Rapeada', 'rap vocals', 'voz rapeada'], ['inst', 'Instrumental', 'instrumental, no vocals', '']
+  ];
+  var LANGS = [['es', 'Español', 'Spanish lyrics', 'en español'], ['en', 'Inglés', 'English lyrics', 'en inglés'], ['spg', 'Spanglish', 'Spanish and English lyrics', 'en español e inglés']];
+  var INSTS = [
+    ['piano', 'Piano', 'piano'], ['acu', 'Guitarra acústica', 'acoustic guitar'], ['ele', 'Guitarra eléctrica', 'electric guitar'],
+    ['synth', 'Sintes', 'synthesizers'], ['808', 'Bajo 808', '808 bass'], ['cuerdas', 'Cuerdas', 'strings'],
+    ['acordeon', 'Acordeón', 'accordion'], ['saxo', 'Saxo', 'saxophone'], ['charango', 'Charango', 'charango'], ['legüero', 'Bombo legüero', 'bombo legüero']
+  ];
+  var STRUCTS = {
+    corta: { name: 'Corta', parts: ['Intro', 'Verse 1', 'Chorus', 'Verse 2', 'Chorus', 'Outro'] },
+    clasica: { name: 'Clásica', parts: ['Intro', 'Verse 1', 'Pre-Chorus', 'Chorus', 'Verse 2', 'Pre-Chorus', 'Chorus', 'Bridge', 'Chorus', 'Outro'] }
+  };
+  var PART_ES = { 'Intro': 'Intro', 'Verse 1': 'Estrofa 1', 'Verse 2': 'Estrofa 2', 'Pre-Chorus': 'Pre-estribillo', 'Chorus': 'Estribillo', 'Bridge': 'Puente', 'Outro': 'Final' };
+
+  var S = { genre: 'pop', bpm: 116, prog: 'pop', key: 0, themes: [], moods: ['alegre'], voice: 'fem', lang: 'es', insts: [], writer: 'suno', struct: 'corta' };
+
+  /* ---------- Acordes ---------- */
+  var SH = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  var FL = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+  var SUF = { M: '', m: 'm', '7': '7', maj7: 'maj7', m7: 'm7', dim: '°' };
+  var IV = { M: [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10], dim: [0, 3, 6] };
+  var FAM = { M: 'M', '7': 'M', maj7: 'M', m: 'm', m7: 'm', dim: 'd' };
+  function prog() { return PROGS.filter(function (p) { return p.id === S.prog; })[0]; }
+  function useFlats(pc, mode) { return mode === 'M' ? [5, 10, 3, 8, 1].indexOf(pc) >= 0 : [2, 7, 0, 5, 10, 3].indexOf(pc) >= 0; }
+  function chords() {
+    var p = prog(), names = useFlats(S.key, p.mode) ? FL : SH;
+    return p.st.map(function (s) {
+      var r = (S.key + s[0]) % 12;
+      return { name: names[r] + SUF[s[1]], fam: FAM[s[1]], root: r, q: s[1] };
+    });
+  }
+  function keyName() { var p = prog(); return (useFlats(S.key, p.mode) ? FL : SH)[S.key] + (p.mode === 'm' ? ' minor' : ' major'); }
+  function keyNameEs() {
+    var SOL = { C: 'Do', D: 'Re', E: 'Mi', F: 'Fa', G: 'Sol', A: 'La', B: 'Si' };
+    var n = (useFlats(S.key, prog().mode) ? FL : SH)[S.key];
+    var es = SOL[n[0]] + (n[1] === '#' ? '♯' : n[1] === 'b' ? '♭' : '');
+    return es + (prog().mode === 'm' ? ' menor' : ' mayor');
+  }
+  function pretty(n) { return n.replace(/#/g, '♯').replace(/([A-G])b/g, '$1♭'); }
+
+  /* ---------- Render de controles ---------- */
+  function chipGroup(el, items, isOn, onClick) {
+    $(el).innerHTML = items.map(function (it) {
+      return '<button type="button" class="chip" data-v="' + it.v + '" aria-pressed="' + isOn(it.v) + '">' + it.label + (it.sub ? '<small>' + it.sub + '</small>' : '') + '</button>';
+    }).join('');
+    $(el).onclick = function (e) { var b = e.target.closest('.chip'); if (b) { onClick(b.dataset.v); renderAll(); } };
+  }
+  function toggleIn(arr, v, max) {
+    var i = arr.indexOf(v);
+    if (i >= 0) arr.splice(i, 1); else { arr.push(v); if (arr.length > max) arr.shift(); }
+  }
+  function genre() { return GENRES.filter(function (g) { return g.id === S.genre; })[0]; }
+
+  function renderAll() {
+    chipGroup('genres', GENRES.map(function (g) { return { v: g.id, label: g.name, sub: g.bpm + ' BPM' }; }),
+      function (v) { return v === S.genre; }, function (v) { S.genre = v; S.bpm = genre().bpm; });
+    chipGroup('tempoPresets', TEMPOS.map(function (t) { return { v: t[1], label: t[0], sub: '≈ ' + t[1] + ' BPM' }; }),
+      function (v) { return +v === S.bpm; }, function (v) { S.bpm = +v; });
+    chipGroup('progs', PROGS.map(function (p) { return { v: p.id, label: p.name, sub: p.rn }; }),
+      function (v) { return v === S.prog; }, function (v) { S.prog = v; });
+    chipGroup('moods', MOODS.map(function (m) { return { v: m[0], label: m[1] }; }),
+      function (v) { return S.moods.indexOf(v) >= 0; }, function (v) { toggleIn(S.moods, v, 2); });
+    chipGroup('voices', VOICES.map(function (x) { return { v: x[0], label: x[1] }; }),
+      function (v) { return v === S.voice; }, function (v) { S.voice = v; });
+    chipGroup('langs', LANGS.map(function (x) { return { v: x[0], label: 'Letra en ' + x[1].toLowerCase() }; }),
+      function (v) { return v === S.lang; }, function (v) { S.lang = v; });
+    chipGroup('insts', INSTS.map(function (x) { return { v: x[0], label: x[1] }; }),
+      function (v) { return S.insts.indexOf(v) >= 0; }, function (v) { toggleIn(S.insts, v, 3); });
+    chipGroup('writer', [{ v: 'suno', label: 'Que la escriba Suno' }, { v: 'yo', label: 'La escribo yo' }],
+      function (v) { return v === S.writer; }, function (v) { S.writer = v; });
+    chipGroup('structs', Object.keys(STRUCTS).map(function (k) { return { v: k, label: 'Estructura ' + STRUCTS[k].name.toLowerCase(), sub: STRUCTS[k].parts.length + ' partes' }; }),
+      function (v) { return v === S.struct; }, function (v) { S.struct = v; });
+    $('langs').hidden = S.voice === 'inst';
+    $('writer').hidden = $('structs').hidden = S.voice === 'inst';
+    $('title').closest('label').hidden = false;
+
+    $('bpm').value = S.bpm; $('bpmVal').textContent = S.bpm;
+    $('progView').innerHTML = chords().map(function (c, i) {
+      return '<div class="chord ' + c.fam + '">' + pretty(c.name) + '<small>' + prog().rn.split(' – ')[i] + '</small></div>';
+    }).join('');
+    $('progDesc').textContent = prog().d + ' En ' + keyNameEs() + '.';
+    renderKeys();
+    renderBeats();
+    renderPrompt();
+  }
+  function renderKeys() {
+    var p = prog(), cur = S.key;
+    $('key').innerHTML = SH.map(function (_, i) {
+      var n = (useFlats(i, p.mode) ? FL : SH)[i] + (p.mode === 'm' ? 'm' : '');
+      return '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + pretty(n) + '</option>';
+    }).join('');
+  }
+  function renderBeats() {
+    var g = genre(), L = g.k.length, rows = [['Bombo', g.k], ['Redoblante', g.s], ['Hi-hat', g.h]];
+    $('beats').innerHTML = rows.filter(function (r) { return r[1]; }).map(function (r) {
+      return '<span>' + r[0] + '</span><div class="lane" style="grid-template-columns:repeat(' + L + ',minmax(0,1fr))">' +
+        r[1].split('').map(function (c, i) { return '<i class="' + (c === 'x' ? 'on' : '') + '" data-i="' + i + '"></i>'; }).join('') + '</div>';
+    }).join('');
+  }
+
+  /* ---------- Prompt ---------- */
+  function pick(list, ids) { return list.filter(function (x) { return ids.indexOf(x[0]) >= 0; }); }
+  function find(list, id) { return list.filter(function (x) { return x[0] === id; })[0]; }
+  function renderPrompt() {
+    var g = genre(), ch = chords(), cs = ch.map(function (c) { return c.name; }).join(' - ');
+    var moods = pick(MOODS, S.moods), themes = pick(THEMES, S.themes), voice = find(VOICES, S.voice), lang = find(LANGS, S.lang);
+    var insts = pick(INSTS, S.insts).map(function (x) { return x[2]; });
+    var free = $('themeText').value.trim(), title = $('title').value.trim();
+    var inst = S.voice === 'inst';
+
+    var style = [g.tag]
+      .concat(moods.map(function (m) { return m[2]; }))
+      .concat(insts.length ? insts : [g.inst])
+      .concat([voice[2]])
+      .concat(inst ? [] : [lang[2]])
+      .concat([S.bpm + ' BPM', 'key of ' + keyName(), 'chord progression ' + cs]);
+    if (g.sw) style.push('swing feel');
+    style = style.join(', ');
+
+    var themeEs = themes.map(function (t) { return t[1].toLowerCase(); }).join(' y ');
+    var about = free || themeEs;
+    var moodEs = moods.map(function (m) { return m[1].toLowerCase(); }).join(' y ');
+
+    if (S.writer === 'suno' || inst) {
+      var desc = (inst ? 'Tema instrumental de ' : 'Canción de ') + g.name.toLowerCase() + (moodEs ? ', ' + moodEs : '') +
+        (about ? (inst ? ', inspirado en ' : ', sobre ') + about : '') +
+        (inst ? '' : ', con ' + voice[3] + ' y letra ' + lang[3]) +
+        '. Tempo de ' + S.bpm + ' BPM, en ' + keyNameEs() + ', con los acordes ' + cs + '.' +
+        (insts.length ? ' Que se destaquen: ' + pick(INSTS, S.insts).map(function (x) { return x[1].toLowerCase(); }).join(', ') + '.' : '');
+      setOut('a', 'Descripción', 'Modo <b>Simple</b> → cuadro de descripción de la canción.', desc, false);
+      setOut('b', 'Estilo (modo Custom)', 'Alternativa: modo <b>Custom</b> → cuadro <b>Styles</b>' + (inst ? ', con la opción Instrumental activada.' : '. Suno escribe la letra si dejás Lyrics vacío o pedís que la genere.'), style, true);
+    } else {
+      setOut('a', 'Estilo', 'Modo <b>Custom</b> → cuadro <b>Styles</b>.', style, true);
+      var parts = STRUCTS[S.struct].parts.map(function (p) {
+        var guide = {
+          'Intro': '', 'Outro': '',
+          'Verse 1': 'Escribí 4 líneas: presentá la historia de ' + (about || 'tu tema') + '.',
+          'Verse 2': 'Escribí 4 líneas: qué pasó después.',
+          'Pre-Chorus': 'Escribí 2 líneas que suban la tensión.',
+          'Chorus': 'Escribí 4 líneas fáciles de cantar. Es la idea principal: repetila igual cada vez.',
+          'Bridge': 'Escribí 2 líneas con algo distinto: un cambio, una sorpresa.'
+        }[p];
+        return '[' + p + ']' + (guide ? '\n✏️ ' + guide : '');
+      }).join('\n\n');
+      setOut('b', 'Letra', 'Modo <b>Custom</b> → cuadro <b>Lyrics</b>. Borrá las líneas con ✏️ y escribí tu letra en su lugar: Suno canta todo lo que no esté entre corchetes.', parts, false);
+    }
+    var t = title ? '<p><b>Título:</b> pegalo en el cuadro Title: «' + escapeHtml(title) + '»</p>' : '';
+    $('howto').innerHTML = '<b>Cómo usarlo en Suno</b><ol>' +
+      (S.writer === 'suno' && !inst
+        ? '<li>Abrí Crear y dejá el modo Simple.</li><li>Copiá la Descripción y pegala.</li><li>Generá y escuchá las dos versiones.</li>'
+        : inst
+          ? '<li>Abrí Crear. Pegá la Descripción en modo Simple, o el Estilo en Styles del modo Custom.</li><li>Activá la opción Instrumental.</li><li>Generá y escuchá las dos versiones.</li>'
+          : '<li>Abrí Crear y pasá al modo Custom.</li><li>Pegá el Estilo en Styles.</li><li>Pegá la Letra, ya escrita por vos, en Lyrics.</li><li>Generá y escuchá las dos versiones.</li>') +
+      '</ol>' + t + '<p>Suno toma el tempo, la tonalidad y los acordes como referencia: no siempre los respeta al pie de la letra. Si no te convence, cambiá un parámetro y probá de nuevo.</p>';
+  }
+  function setOut(p, title, where, text, count) {
+    $(p + 'Title').textContent = title; $(p + 'Where').innerHTML = where; $(p + 'Text').textContent = text;
+    $(p + 'Count').textContent = count ? text.length + ' / 1000' : text.length + ' caracteres';
+    $(p + 'Msg').textContent = '';
+  }
+  function escapeHtml(s) { return s.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  document.querySelectorAll('.copy').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var id = b.dataset.copy, pre = $(id), msg = $(id[0] + 'Msg');
+      var done = function () { msg.textContent = 'Copiado'; };
+      var fallback = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        msg.textContent = 'Texto seleccionado: copialo con Ctrl+C o mantené apretado.';
+      };
+      try { navigator.clipboard.writeText(pre.textContent).then(done, fallback); } catch (e) { fallback(); }
+    });
+  });
+
+  /* ---------- Audio ---------- */
+  var ctx = null, playing = false, timer = null, step = 0, nextT = 0;
+  function A() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); return ctx; }
+  var noiseBuf = null;
+  function noise() {
+    if (noiseBuf) return noiseBuf;
+    var a = A(); noiseBuf = a.createBuffer(1, a.sampleRate * 0.5, a.sampleRate);
+    var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return noiseBuf;
+  }
+  function kick(t) {
+    var a = A(), o = a.createOscillator(), g = a.createGain();
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.4);
+  }
+  function snare(t) {
+    var a = A(), n = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    n.buffer = noise(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); n.stop(t + 0.2);
+  }
+  function hat(t, accent) {
+    var a = A(), n = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    n.buffer = noise(); f.type = 'highpass'; f.frequency.value = 7000;
+    g.gain.setValueAtTime(accent ? 0.16 : 0.09, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); n.stop(t + 0.06);
+  }
+  function pad(c, t, dur) {
+    var a = A(), out = a.createGain(), lp = a.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1800; out.gain.value = 0.8; lp.connect(out); out.connect(a.destination);
+    var base = 48 + c.root; if (base > 55) base -= 12;
+    [base - 12].concat(IV[c.q].map(function (i) { return base + 12 + i; })).forEach(function (m, i) {
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = i === 0 ? 'sine' : 'triangle'; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12);
+      var pk = i === 0 ? 0.16 : 0.05;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + 0.03);
+      g.gain.setValueAtTime(pk * 0.8, t + dur * 0.7); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+    });
+  }
+  function stepDur(g) { return g.bar === 6 ? 60 / S.bpm / 3 : 60 / S.bpm / 4; }
+  function schedule() {
+    var a = A();
+    while (nextT < a.currentTime + 0.12) {
+      var g = genre(), L = g.k.length, i = step % L, sd = stepDur(g);
+      var t = nextT + (g.sw && i % 4 === 2 ? sd * 0.33 : 0);
+      if ($('useDrums').checked) {
+        if (g.k[i] === 'x') kick(t);
+        if (g.s[i] === 'x') snare(t);
+        if (g.h && g.h[i] === 'x') hat(t, i % 4 === 0);
+      }
+      var barIdx = Math.floor(step / g.bar);
+      if ($('useChords').checked && step % g.bar === 0) { var ch = chords(); pad(ch[barIdx % ch.length], t, sd * g.bar * 0.97); }
+      (function (i, t) { setTimeout(function () { mark(i); }, Math.max(0, (t - a.currentTime) * 1000)); })(i, t);
+      nextT += sd; step++;
+    }
+  }
+  function mark(i) {
+    if (!playing) return;
+    document.querySelectorAll('.lane i').forEach(function (el) { el.classList.toggle('now', +el.dataset.i === i); });
+  }
+  function start() { A(); playing = true; step = 0; nextT = A().currentTime + 0.05; schedule(); timer = setInterval(schedule, 25); setBtn(); }
+  function stop() { playing = false; clearInterval(timer); document.querySelectorAll('.lane i.now').forEach(function (el) { el.classList.remove('now'); }); setBtn(); }
+  function setBtn() {
+    var b = $('play1');
+    b.querySelector('span').textContent = playing ? 'Detener' : 'Escuchar';
+    b.querySelector('svg').innerHTML = playing ? '<rect x="3" y="3" width="10" height="10" rx="1"/>' : '<path d="M4 2l10 6-10 6z"/>';
+  }
+  $('play1').addEventListener('click', function () { playing ? stop() : start(); });
+
+  /* ---------- Eventos ---------- */
+  $('bpm').addEventListener('input', function () { S.bpm = +this.value; $('bpmVal').textContent = S.bpm; renderAll(); });
+  $('key').addEventListener('change', function () { S.key = +this.value; renderAll(); });
+  $('themeText').addEventListener('input', renderPrompt);
+  $('title').addEventListener('input', renderPrompt);
+  function rnd(a) { return a[Math.floor(Math.random() * a.length)]; }
+  $('surprise').addEventListener('click', function () {
+    var g = rnd(GENRES); S.genre = g.id; S.bpm = g.bpm; S.prog = rnd(PROGS).id; S.key = Math.floor(Math.random() * 12);
+    S.moods = [rnd(MOODS)[0]]; S.voice = rnd(VOICES.slice(0, 5))[0]; S.insts = [];
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+
+</body></html>
